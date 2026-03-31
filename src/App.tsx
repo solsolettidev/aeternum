@@ -1,36 +1,24 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { Toaster } from "@/components/ui/toaster";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import Index from "./pages/Index.tsx";
-import Login from "./pages/Login.tsx";
-import Gallery from "./pages/Gallery.tsx";
-import AlbumDetail from "./pages/AlbumDetail.tsx";
-import Profile from "./pages/Profile.tsx";
-import Friends from "./pages/Friends.tsx";
-import NotFound from "./pages/NotFound.tsx";
+import { Routes, Route } from "react-router-dom";
+import ProtectedRoute from "@/components/ProtectedRoute";
+import Login from "@/pages/Login";
+import Gallery from "@/pages/Gallery";
+import Profile from "@/pages/Profile";
+import Friends from "@/pages/Friends";
+import AlbumDetail from "@/pages/AlbumDetail";
+import Home from "@/pages/Index";
 
-const queryClient = new QueryClient();
+export default function App() {
+  return (
+    <Routes>
+      <Route path="/" element={<Home />} />
+      <Route path="/login" element={<Login />} />
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/gallery" element={<Gallery />} />
-          <Route path="/albums" element={<AlbumDetail />} />
-          <Route path="/profile" element={<Profile />} />
-          <Route path="/friends" element={<Friends />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
-
-export default App;
+      <Route element={<ProtectedRoute />}>
+        <Route path="/gallery" element={<Gallery />} />
+        <Route path="/profile" element={<Profile />} />
+        <Route path="/friends" element={<Friends />} />
+        <Route path="/albums/:id" element={<AlbumDetail />} />
+      </Route>
+    </Routes>
+  );
+}

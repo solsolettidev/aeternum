@@ -1,15 +1,83 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Camera, Eye, EyeOff } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import galleryImage from "@/assets/gallery-5.jpg";
 
 const Login = () => {
+  const navigate = useNavigate();
+
   const [isSignUp, setIsSignUp] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
+  const [fullName, setFullName] = useState("");
+  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  async function handleEmailAuth() {
+    setError("");
+    setLoading(true);
+
+    try {
+      if (isSignUp) {
+        const { error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            emailRedirectTo: window.location.origin,
+            data: {
+              full_name: fullName,
+              username,
+            },
+          },
+        });
+
+        if (error) throw error;
+        navigate("/gallery");
+        return;
+      }
+
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) throw error;
+      navigate("/gallery");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Authentication error");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleGoogleAuth() {
+    setError("");
+
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: `${window.location.origin}/gallery`,
+      },
+    });
+
+    if (error) {
+      setError(error.message);
+    }
+  }
+
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    await handleEmailAuth();
+  }
+
   return (
     <div className="min-h-screen bg-background flex">
-      {/* Left - Form */}
       <div className="flex-1 flex items-center justify-center px-6 py-12">
         <motion.div
           initial={{ opacity: 0, y: 16 }}
@@ -25,43 +93,56 @@ const Login = () => {
           <h1 className="font-serif text-3xl text-foreground mb-2">
             {isSignUp ? "Create your space" : "Welcome back"}
           </h1>
+
           <p className="font-sans text-sm text-muted-foreground mb-8">
             {isSignUp
               ? "Begin curating your personal archive"
               : "Step into your gallery of memories"}
           </p>
 
-          <form className="space-y-4" onSubmit={(e) => e.preventDefault()}>
+          <form className="space-y-4" onSubmit={handleSubmit}>
             {isSignUp && (
               <motion.div
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: "auto" }}
                 transition={{ duration: 0.3 }}
               >
-                <label className="text-xs font-sans text-muted-foreground mb-1.5 block">Full name</label>
+                <label className="text-xs font-sans text-muted-foreground mb-1.5 block">
+                  Full name
+                </label>
                 <input
                   type="text"
                   placeholder="Your name"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
                   className="w-full bg-muted/40 border border-border rounded-lg px-4 py-3 text-sm font-sans text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary/30 transition-all"
                 />
               </motion.div>
             )}
 
             <div>
-              <label className="text-xs font-sans text-muted-foreground mb-1.5 block">Email</label>
+              <label className="text-xs font-sans text-muted-foreground mb-1.5 block">
+                Email
+              </label>
               <input
                 type="email"
                 placeholder="hello@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 className="w-full bg-muted/40 border border-border rounded-lg px-4 py-3 text-sm font-sans text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary/30 transition-all"
               />
             </div>
 
             <div>
-              <label className="text-xs font-sans text-muted-foreground mb-1.5 block">Password</label>
+              <label className="text-xs font-sans text-muted-foreground mb-1.5 block">
+                Password
+              </label>
               <div className="relative">
                 <input
                   type={showPassword ? "text" : "password"}
                   placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
                   className="w-full bg-muted/40 border border-border rounded-lg px-4 py-3 text-sm font-sans text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary/30 transition-all pr-10"
                 />
                 <button
@@ -80,28 +161,31 @@ const Login = () => {
                 animate={{ opacity: 1, height: "auto" }}
                 transition={{ duration: 0.3 }}
               >
-                <label className="text-xs font-sans text-muted-foreground mb-1.5 block">Username</label>
+                <label className="text-xs font-sans text-muted-foreground mb-1.5 block">
+                  Username
+                </label>
                 <input
                   type="text"
                   placeholder="@your.username"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
                   className="w-full bg-muted/40 border border-border rounded-lg px-4 py-3 text-sm font-sans text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary/30 transition-all"
                 />
               </motion.div>
             )}
 
+            {error && (
+              <p className="text-sm text-red-500">{error}</p>
+            )}
+
             <button
               type="submit"
-              className="w-full bg-primary text-primary-foreground font-sans text-sm py-3.5 rounded-full hover:opacity-90 transition-opacity duration-300 mt-2"
+              disabled={loading}
+              className="w-full bg-primary text-primary-foreground font-sans text-sm py-3.5 rounded-full hover:opacity-90 transition-opacity duration-300 mt-2 disabled:opacity-60"
             >
-              {isSignUp ? "Create account" : "Sign in"}
+              {loading ? "Loading..." : isSignUp ? "Create account" : "Sign in"}
             </button>
           </form>
-
-          {!isSignUp && (
-            <p className="text-xs font-sans text-muted-foreground text-center mt-4">
-              <button className="text-primary hover:text-rose-deep transition-colors">Forgot password?</button>
-            </p>
-          )}
 
           <div className="flex items-center gap-3 my-6">
             <div className="flex-1 h-px bg-border" />
@@ -109,7 +193,10 @@ const Login = () => {
             <div className="flex-1 h-px bg-border" />
           </div>
 
-          <button className="w-full flex items-center justify-center gap-2 border border-border rounded-full py-3 text-sm font-sans text-foreground hover:bg-muted/50 transition-colors duration-300">
+          <button
+            onClick={handleGoogleAuth}
+            className="w-full flex items-center justify-center gap-2 border border-border rounded-full py-3 text-sm font-sans text-foreground hover:bg-muted/50 transition-colors duration-300"
+          >
             Continue with Google
           </button>
 
@@ -125,7 +212,6 @@ const Login = () => {
         </motion.div>
       </div>
 
-      {/* Right - Visual */}
       <div className="hidden lg:block lg:w-1/2 relative overflow-hidden">
         <motion.div
           initial={{ opacity: 0, scale: 1.05 }}
@@ -134,22 +220,12 @@ const Login = () => {
           className="absolute inset-0"
         >
           <img
-            src="/src/assets/gallery-5.jpg"
+            src={galleryImage}
             alt="Soft petals"
             className="w-full h-full object-cover"
           />
           <div className="absolute inset-0 bg-gradient-to-l from-transparent to-background/30" />
         </motion.div>
-        <div className="absolute bottom-12 left-12 right-12">
-          <motion.p
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.6, duration: 0.6 }}
-            className="font-serif text-2xl text-primary-foreground leading-relaxed"
-          >
-            "The best thing about photographs is that they don't change, even when the people in them do."
-          </motion.p>
-        </div>
       </div>
     </div>
   );
